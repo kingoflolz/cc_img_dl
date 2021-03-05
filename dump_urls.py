@@ -84,7 +84,7 @@ def dump_url_from_file(fname, oname):
         fo.close()
 
     except:
-        print(f"file {input_files} failed to process")
+        print(f"file {fname} failed to process")
         pass
 
 

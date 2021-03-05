@@ -88,6 +88,12 @@ def dump_url_from_file(fname, oname):
         pass
 
 
+def process(x):
+    in_file, out_file = x
+    Path("/".join(out_file.split("/")[:-1])).mkdir(parents=True, exist_ok=True)
+    return dump_url_from_file(in_file, out_file)
+
+
 if __name__ == "__main__":
     set_start_method("spawn")
 
@@ -100,12 +106,6 @@ if __name__ == "__main__":
     input_files = glob(f"{input_dir}/**/*")
 
     output_files = [i.replace(input_dir, output_dir, 1) for i in input_files]
-
-    def process(x):
-        in_file, out_file = x
-        Path("/".join(out_file.split("/")[:-1])).mkdir(parents=True, exist_ok=True)
-        return dump_url_from_file(in_file, out_file)
-
     p = Pool(thread)
 
     urls = list(tqdm(p.imap_unordered(process, zip(input_files, output_files)), total=len(input_files)))

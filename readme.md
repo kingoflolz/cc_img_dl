@@ -12,9 +12,14 @@ First, use `dump_urls.py` to create image level metadata from page level metadat
 python3 dump_urls.py 8 crawl urls
 ```
 
-Next: TODO
+Then, use `sort_dedup.py` to perform URL level deduplication
+```shell
+# usage:
+# python3 sort_dedup.py <threads> <input dir> <temp working dir> <output dir>
+python3 sort_dedup.py 8 urls hash_clustered deduped_urls
+```
 
 # TODOs
 - [x] Infrastructure to run `dump_urls.py` across a glob of `.jsonl.wat.gz`s in parallel
-- [ ] Shuffling and global deduplication
+- [x] Shuffling and global deduplication
 - [ ] Host checking, downloading, resizing/converting

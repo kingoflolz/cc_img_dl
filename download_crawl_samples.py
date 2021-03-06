@@ -35,4 +35,4 @@ def download(url):
 
 p = Pool(100)
 
-list(tqdm(p.imap_unordered(download, out[:1000])))
+list(tqdm(p.imap_unordered(download, out[:10000])))

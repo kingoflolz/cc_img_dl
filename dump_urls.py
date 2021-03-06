@@ -1,4 +1,5 @@
 import gzip
+import hashlib
 import json
 import sys
 from glob import glob
@@ -9,10 +10,82 @@ from urllib.parse import urlparse, urljoin
 from tqdm import tqdm
 
 
+def canonicalize_wikimedia(url):
+    path = url.path.split("/")
+
+    if "thumb" in path:
+        path = path[:-1]
+        path.remove("thumb")
+
+    path = "/".join(path)
+
+    return url._replace(path=path, scheme="http", params='', query='', fragment='')
+
+
+def canonicalize_wp(url):
+    target_url = url.path[1:]
+    return urlparse(target_url)
+
+
+def canonicalize_ytimg(url):
+    path = url.path
+    larger_suffixes = {"sddefault",  # 640
+                       "maxresdefault",  # original
+                       }
+
+    *path, fname = path.split("/")
+    option, _ = fname.split(".")
+
+    if option not in larger_suffixes:
+        option = "0"
+
+    fname = f"{option}.jpg"
+    path = "/".join(path + [fname])
+
+    return url._replace(path=path, netloc="i.ytimg.com", scheme="http", params='', query='', fragment='')
+
+
+# replace all suffixes with default (500x500) unless its larger
+def canonicalize_flickr(url):
+    path = url.path
+
+    larger_suffixes = {"z",  # 640
+                       "c",  # 800
+                       "b",  # 1024
+                       }
+
+    path, ext = path.split(".")
+    if path[-2] == "_":
+        if path[-1] not in larger_suffixes:
+            path = path[:-2]
+
+    return url._replace(path=f"{path}.{ext}", scheme="http", params='', query='', fragment='')
+
+
+# replace thumbnails, try to get full res images, skip proxies etc
+def canonicalize_url(url):
+    parsed = urlparse(url)
+    hostname = parsed.netloc
+
+    special_cases = {
+        "flickr.com": canonicalize_flickr,
+        "img.youtube.com": canonicalize_ytimg,
+        "ytimg.com": canonicalize_ytimg,
+        "wp.com": canonicalize_wp,
+        "upload.wikimedia.org": canonicalize_wikimedia
+    }
+
+    for name, fn in special_cases.items():
+        if name in hostname:
+            return fn(parsed).geturl()
+
+    return parsed.geturl()
+
+
 def dump_url_from_file(fname, oname):
     try:
         f = gzip.open(fname, 'rb')
-        fo = gzip.open(oname, 'wb')
+        fo = gzip.open(oname, 'wb', compresslevel=6)
         all_images = []
 
         for i in f:
@@ -41,11 +114,13 @@ def dump_url_from_file(fname, oname):
 
             for img in links:
                 try:
+                    if len(images) > 100:
+                        break
                     if "creativecommons" in img["url"]:
                         licenses.add(img["url"])
                     else:
-                        if "alt" in img and len(img["alt"]) > 10:
-                            img["url"] = urljoin(target_path, img["url"])
+                        if "alt" in img and len(img["alt"]) > 10 and img["url"].startswith("http"):
+                            img["url"] = canonicalize_url(urljoin(target_path, img["url"]))
                             images.append(img)
                 except:
                     pass
@@ -54,12 +129,11 @@ def dump_url_from_file(fname, oname):
                 img["page_meta"] = set([img["alt"]] + page_meta)
                 img["licenses"] = licenses
                 img["alt"] = set([img["alt"]])
-                img["count"] = 1
                 all_images.append(img)
 
         deduped_images = {}
         for img in all_images:
-            existing = deduped_images.get(img["url"], {})
+            existing = deduped_images.get(img["url"], img)
 
             def get_or_update(key):
                 e = existing.get(key, set())
@@ -79,12 +153,18 @@ def dump_url_from_file(fname, oname):
             img["alt"] = list(img["alt"])
             img["page_meta"] = list(img["page_meta"])
             img["licenses"] = list(img["licenses"])
+
+            h = hashlib.md5(img["url"].encode('utf-8')).hexdigest()
+            img["hash"] = h
+            fo.write(h.encode())
+            fo.write(b" ")
+
             fo.write(json.dumps(img).encode())
             fo.write(b"\n")
         fo.close()
 
     except:
-        print(f"file {fname} failed to process")
+        print(f"\rfile {fname} failed to process")
         pass
 
 

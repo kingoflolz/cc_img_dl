@@ -1,0 +1,16 @@
+[package]
+name = "commoncrawl_filter"
+version = "0.1.0"
+authors = ["Ben Wang <wangben3@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+warc = "0.2.1"
+flate2 = { version = "1.0", features = ["zlib-ng-compat"], default-features = false }
+twoway = "0.2.1"
+ureq = "2.0.2"
+serde_json = "1.0"
+serde = {version = "1.0", features = ["derive"]}
+lazy_static = "1.4.0"

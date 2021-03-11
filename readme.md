@@ -37,14 +37,14 @@ python3 sort_dedup.py 8 urls hash_clustered deduped_urls
 Finally, use `img_dl` to actually download the data
 ```shell
 # usage:
-# python3 img_dl.py <threads> <input dir> <error dir> <image output dir>
-python3 img_dl.py 8 deduped_urls errors images
+# python3 download_images.py <threads> <input dir> <error dir> <image output dir>
+python3 download_images.py 8 deduped_urls errors images
 
 # to retry failed downloads after a complete run, use the errors directory as a new input dir. i.e.
-python3 img_dl.py 8 errors new_errors images
+python3 download_images.py 8 errors new_errors images
 
 # and again later perhaps
-python3 img_dl.py 8 new_errors new_new_errors images
+python3 download_images.py 8 new_errors new_new_errors images
 
 # etc etc repeat until satisfied
 ```

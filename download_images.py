@@ -1,11 +1,7 @@
-# use a parallel radix sort of url hashes to deduplicate urls
-import itertools
-import json
+# Runs img_dl program across all deduplicated url jsonls
 import subprocess
 from glob import glob
-import gzip
 import sys
-from itertools import product
 from multiprocessing import Pool, set_start_method
 from pathlib import Path
 import random

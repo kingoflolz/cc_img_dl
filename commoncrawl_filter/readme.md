@@ -13,6 +13,7 @@ commoncrawl_filter http://commoncrawl.s3.amazonaws.com/crawl-data/CC-MAIN-2021-0
 ```
 
 # Run instructions (all WATs)
+## Outdated! see readme in repo root
 A python helper program is also provided which helps you run multiple instances of the downloader
 
 ```shell

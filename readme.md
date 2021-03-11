@@ -2,9 +2,23 @@
 
 A script for extracting URLs/license information from CommonCrawl WATs and downloading/resizing these images
 
+# Compile instructions
+
+To compile the rust components (`commoncrawl_filter` and `img_dl`), run `./compile.sh` when in the root of the repo.
+
 # Run instructions
 
-First, use `commoncrawl_filter` to extract relevant data from Common Crawl WAT files, see folder for more details.
+First, to extract relevant data from Common Crawl WAT files.
+
+```shell
+# get urls for all WATs
+python3 download_warc_urls.py
+
+# download and process all WATs
+# Usage:
+# python3 download_cc.py <threads> <url list> <output path>
+python3 download_cc.py 8 indexes_1614468564_warc_urls.txt out_dir
+```
 
 Then use `dump_urls.py` to create image level metadata from page level metadata
 ```shell
@@ -22,9 +36,19 @@ python3 sort_dedup.py 8 urls hash_clustered deduped_urls
 
 Finally, use `img_dl` to actually download the data
 ```shell
-TODO
+# usage:
+# python3 img_dl.py <threads> <input dir> <error dir> <image output dir>
+python3 img_dl.py 8 deduped_urls errors images
+
+# to retry failed downloads after a complete run, use the errors directory as a new input dir. i.e.
+python3 img_dl.py 8 errors new_errors images
+
+# and again later perhaps
+python3 img_dl.py 8 new_errors new_new_errors images
+
+# etc etc repeat until satisfied
 ```
 
 # TODOs
-- [ ] Host checking, downloading, resizing/converting
+- [ ] Resizing/converting
 - [ ] Additional filtering

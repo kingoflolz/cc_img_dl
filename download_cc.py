@@ -19,7 +19,7 @@ def process_wat(url, output_path):
 
     while True:
         try:
-            subprocess.run(["./commoncrawl_filter", "http://commoncrawl.s3.amazonaws.com/" + url, f"{output_path}/{dir_name}/{output_name}".strip()], timeout=1200, check=True)
+            subprocess.run(["./commoncrawl_filter_bin", "http://commoncrawl.s3.amazonaws.com/" + url, f"{output_path}/{dir_name}/{output_name}".strip()], timeout=1200, check=True)
             break
         except:
             pass

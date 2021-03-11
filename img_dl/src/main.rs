@@ -5,14 +5,11 @@ use std::io::BufRead;
 use std::time::Duration;
 use std::env;
 
-#[macro_use]
-extern crate lazy_static;
-
 use futures::future::*;
+use futures::{StreamExt, stream::iter};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::time::timeout;
-use access_queue::AccessQueue;
 
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
@@ -48,9 +45,7 @@ fn get_image_records(fname: &str) -> Vec<ImageRecord> {
 }
 
 async fn try_download(url: String, fname: String) -> Result<()> {
-    let guard = Q.access().await;
     // println!("download url: {}", url);
-
     let mut response = reqwest::get(&url).await?;
     // println!("response");
 
@@ -77,8 +72,6 @@ async fn try_download(url: String, fname: String) -> Result<()> {
         }
     }
 
-    drop(guard);
-
     let mut file = File::create(fname).await?;
     file.write_all(&buffered_file).await?;
     file.shutdown().await?;
@@ -88,7 +81,7 @@ async fn try_download(url: String, fname: String) -> Result<()> {
 async fn retry_download(url: String, fname: String) -> Result<()> {
     let mut tries: usize = 0;
     loop {
-        let ret = timeout(Duration::from_secs(10), try_download(url.clone(), fname.clone())).await;
+        let ret = timeout(Duration::from_secs(20), try_download(url.clone(), fname.clone())).await;
         tries += 1;
 
         match ret {
@@ -107,10 +100,6 @@ async fn retry_download(url: String, fname: String) -> Result<()> {
             }
         };
     }
-}
-
-lazy_static! {
-    static ref Q: AccessQueue<()> = AccessQueue::new((), 128);
 }
 
 #[tokio::main]
@@ -138,19 +127,18 @@ async fn main() -> Result<(), Error> {
         })
     }).collect();
 
-    let all_fut = join_all(futures);
-    let ret = all_fut.await;
+    let mut buffered = iter(futures).buffer_unordered(128);
 
-    for i in ret {
+    while let Some(i) = buffered.next().await {
         match i {
-            Ok(Some(r)) => {
-                let mut jsonstr = serde_json::to_string(&r)?;
-                jsonstr.push('\n');
+                Ok(Some(r)) => {
+                    let mut jsonstr = serde_json::to_string(&r)?;
+                    jsonstr.push('\n');
 
-                outfile_writer.write_all(jsonstr.as_bytes())?;
+                    outfile_writer.write_all(jsonstr.as_bytes())?;
+                }
+                _ => {}
             }
-            _ => {}
-        }
     }
 
     Ok(())

@@ -2,3 +2,6 @@
 /urls/
 /hash_clustered/
 /deduped_urls/
+/images/
+/errors/
+*_bin

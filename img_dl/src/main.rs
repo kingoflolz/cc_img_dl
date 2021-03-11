@@ -1,34 +1,40 @@
 use std::str;
 use std::fs::OpenOptions;
 use std::io::{BufReader, Write};
-use flate2::read::GzDecoder;
-#[macro_use]
-extern crate lazy_static;
+use std::io::BufRead;
+use std::time::Duration;
 use std::env;
 
-use std::collections::HashSet;
+#[macro_use]
+extern crate lazy_static;
 
-use serde::{Deserialize, Serialize};
-use flate2::Compression;
-use std::io::BufRead;
-use anyhow::{Result, anyhow, Error};
+use futures::future::*;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use access_queue::AccessQueue;
-use futures::future::*;
-
 use tokio::time::timeout;
-use std::time::Duration;
+use access_queue::AccessQueue;
+
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use flate2::Compression;
+
+use serde::{Deserialize, Serialize};
+
+use anyhow::{Result, anyhow, Error};
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct ImageRecord {
     url: String,
     hash: String,
+    #[serde(skip_deserializing)]
+    #[serde(skip_serializing_if="Option::is_none")]
+    error: Option<String>,
 }
 
 fn get_image_records(fname: &str) -> Vec<ImageRecord> {
     let file = OpenOptions::new().read(true).open(fname).unwrap();
-    let mut file = GzDecoder::new(file);
+    let file = GzDecoder::new(file);
     let file = BufReader::new(file);
 
     let mut ret = Vec::new();
@@ -43,13 +49,13 @@ fn get_image_records(fname: &str) -> Vec<ImageRecord> {
 
 async fn try_download(url: String, fname: String) -> Result<()> {
     let guard = Q.access().await;
-    println!("download url: {}", url);
+    // println!("download url: {}", url);
 
     let mut response = reqwest::get(&url).await?;
-    println!("response");
+    // println!("response");
 
     if response.status() != 200 {
-        return Err(anyhow!("Not ok"))
+        return Err(anyhow!("Return code not ok ({:?})", response.status()))
     }
 
     let mut buffered_file = if let Some(size) = response.content_length() {
@@ -80,43 +86,72 @@ async fn try_download(url: String, fname: String) -> Result<()> {
 }
 
 async fn retry_download(url: String, fname: String) -> Result<()> {
-    for i in 0..3 {
-        let ret = timeout(Duration::from_secs(20), try_download(url.clone(), fname.clone())).await;
+    let mut tries: usize = 0;
+    loop {
+        let ret = timeout(Duration::from_secs(10), try_download(url.clone(), fname.clone())).await;
+        tries += 1;
 
         match ret {
             Ok(Ok(_)) => {
-                break;
+                return Ok(())
             }
-            _ => {
-                continue;
+            Ok(Err(e)) => {
+                if tries == 3 {
+                    return Err(e)
+                }
             }
+            Err(_) => {
+                if tries == 3 {
+                    return Err(anyhow!("timeout error"))
+                }
+            }
+        };
+    }
+}
+
+lazy_static! {
+    static ref Q: AccessQueue<()> = AccessQueue::new((), 128);
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    let args: Vec<String> = env::args().collect();
+    assert_eq!(args.len(), 4, "please call img_dl <input_file> <output_dir> <output_file>");
+
+    let records = get_image_records(&args[1]);
+
+    // records.truncate(100);
+    // println!("records {}", records.len());
+
+    let outfile = OpenOptions::new().create(true).write(true).truncate(true).open(&args[3])?;
+    let mut outfile_writer = GzEncoder::new(outfile, Compression::new(3));
+
+    let futures: Vec<_> = records.iter().map(|record| {
+        retry_download(record.url.clone(), format!("{}/{}", &args[2], &record.hash)).then(move |result| {
+            if let Err(e) = &result {
+                let mut record = record.clone();
+                record.error = Some(e.to_string());
+                ok::<Option<ImageRecord>, Error>(Some(record))
+            } else {
+                ok::<Option<ImageRecord>, Error>(None)
+            }
+        })
+    }).collect();
+
+    let all_fut = join_all(futures);
+    let ret = all_fut.await;
+
+    for i in ret {
+        match i {
+            Ok(Some(r)) => {
+                let mut jsonstr = serde_json::to_string(&r)?;
+                jsonstr.push('\n');
+
+                outfile_writer.write_all(jsonstr.as_bytes())?;
+            }
+            _ => {}
         }
     }
 
     Ok(())
-}
-
-lazy_static! {
-    static ref Q: AccessQueue<()> = AccessQueue::new((), 4096);
-}
-
-#[tokio::main]
-async fn main() {
-    // let args: Vec<String> = env::args().collect();
-    // assert_eq!(args.len(), 3, "please call img_dl <input_file> <output_dir>");
-
-    let records = get_image_records("deduped.jsonl.gz");
-    println!("records {}", records.len());
-
-    // let futures: Vec<_> = records.iter().map(|record| {
-    //     try_download(record.url.clone(), format!("dbg/{}", &record.hash)).then(|result| {
-    //         if let Err(e) = &result {
-    //             println!("error: {}", e)
-    //         }
-    //         ok::<(), Error>(())
-    //     })
-    // }).collect();
-//
-    // let all_fut = join_all(futures);
-    // all_fut.await;
 }

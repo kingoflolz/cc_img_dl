@@ -51,7 +51,7 @@ python3 download_images.py 8 new_errors new_new_errors images
 # etc etc repeat until satisfied
 ```
 
-Use `file_convert.py` to convert all images to jpeg, resize if too large, discard if too small (~500TB input, ~125TB output, ~100 CPU days)
+Use `file_convert.py` to convert all images to jpeg, resize if too large, discard if too small (~500TB input, ~200TB output, ~100 CPU days)
 ```shell
 # usage:
 # python3 file_convert.py <threads> <downloaded images> <deduped URL dir> <image output> <label output dir>

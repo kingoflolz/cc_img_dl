@@ -74,6 +74,7 @@ def convert_file(input_file, output_file):
             if not success:
                 return {}
 
+            buffer.tofile(output_file)
             return {"orig_dim": size, "new_dim": img.shape[:2]}
     else:
         return {}

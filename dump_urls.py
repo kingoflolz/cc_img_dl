@@ -128,7 +128,8 @@ def dump_url_from_file(fname, oname):
             for img in images:
                 img["page_meta"] = set([img["alt"]] + page_meta)
                 img["licenses"] = licenses
-                img["alt"] = set([img["alt"]])
+                img["alt"] = {img["alt"]}
+                img["page_url"] = {target_path}
                 all_images.append(img)
 
         deduped_images = {}
@@ -143,6 +144,7 @@ def dump_url_from_file(fname, oname):
             existing["alt"] = get_or_update("alt")
             existing["page_meta"] = get_or_update("page_meta")
             existing["licenses"] = get_or_update("licenses")
+            existing["page_url"] = get_or_update("page_url")
             existing["count"] = existing.get("count", 0) + 1
 
             existing["page_meta"].difference_update(existing["alt"])
@@ -153,6 +155,7 @@ def dump_url_from_file(fname, oname):
             img["alt"] = list(img["alt"])
             img["page_meta"] = list(img["page_meta"])
             img["licenses"] = list(img["licenses"])
+            img["page_url"] = list(img["page_url"])
 
             h = hashlib.md5(img["url"].encode('utf-8')).hexdigest()
             img["hash"] = h

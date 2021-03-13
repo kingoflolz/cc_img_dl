@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     p = Pool(threads)
 
-    input_files = glob(f"{input_dir}/*/*/*")
+    input_files = glob(f"{input_dir}/*/*/*")[:1]
     random.shuffle(input_files)
 
     process = partial(process_download, input_root_dir=input_dir, output_root_dir=out_dir, error_root_dir=errors_dir)

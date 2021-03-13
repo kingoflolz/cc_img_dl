@@ -79,10 +79,13 @@ def dedup(input_dir, out_file):
                 new["alt"].update(i["alt"])
                 new["page_meta"].update(i["page_meta"])
                 new["licenses"].update(i["licenses"])
+                new["page_url"].update(i["page_url"])
             else:
                 i["alt"] = set(i["alt"])
                 i["page_meta"] = set(i["page_meta"])
                 i["licenses"] = set(i["licenses"])
+                i["page_url"] = set(i["page_url"])
+
                 new = i
 
             images[i["hash"]] = new
@@ -91,6 +94,7 @@ def dedup(input_dir, out_file):
     for i in images.values():
         i["alt"] = list(i["alt"])
         i["page_meta"] = list(i["page_meta"])
+        i["page_url"] = list(i["page_url"])
         i["licenses"] = list(i["licenses"])
 
         of.write(json.dumps(i).encode())

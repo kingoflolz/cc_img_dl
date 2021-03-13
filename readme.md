@@ -34,7 +34,7 @@ Use `sort_dedup.py` to perform URL level deduplication
 python3 sort_dedup.py 8 urls hash_clustered deduped_urls
 ```
 
-Finally, use `img_dl` to actually download the data
+Use `download_images.py` (which calls `img_dl`) to actually download the data
 ```shell
 # usage:
 # python3 download_images.py <threads> <input dir> <error dir> <image output dir>
@@ -49,6 +49,12 @@ python3 download_images.py 8 new_errors new_new_errors images
 # etc etc repeat until satisfied
 ```
 
+Use `file_convert.py` to convert all images to jpeg, resize if too large, discard if too small
+```shell
+# usage:
+# python3 file_convert.py <threads> <downloaded images> <deduped URL dir> <image output> <label output dir>
+python3 8 images deduped_urls converted_images labels
+```
+
 # TODOs
-- [ ] Resizing/converting
 - [ ] Additional filtering

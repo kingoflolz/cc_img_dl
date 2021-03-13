@@ -8,7 +8,9 @@ To compile the rust components (`commoncrawl_filter` and `img_dl`), run `./compi
 
 # Run instructions
 
-First, to extract relevant data from Common Crawl WAT files.
+Note all estimates are very rough, could easily be off by a factor of 2 (but should be the right OOM at least...)
+
+First, to extract relevant data from Common Crawl WAT files. (~1.2PB ingress, ~500GB output, ~100 CPU days)
 
 ```shell
 # get urls for all WATs
@@ -20,21 +22,21 @@ python3 download_warc_urls.py
 python3 download_cc.py 8 indexes_1614468564_warc_urls.txt out_dir
 ```
 
-Then use `dump_urls.py` to create image level metadata from page level metadata
+Then use `dump_urls.py` to create image level metadata from page level metadata (~500GB input, ~250GB output, ~10 CPU days)
 ```shell
 # usage:
 # python3 dump_urls.py <threads> <input dir> <output dir (created automatically)>
 python3 dump_urls.py 8 crawl urls
 ```
 
-Use `sort_dedup.py` to perform URL level deduplication
+Use `sort_dedup.py` to perform URL level deduplication (~250GB input, ~400GB output, ~500GB scratch space, ~15 CPU days)
 ```shell
 # usage:
 # python3 sort_dedup.py <threads> <input dir> <temp working dir> <output dir>
 python3 sort_dedup.py 8 urls hash_clustered deduped_urls
 ```
 
-Use `download_images.py` (which calls `img_dl`) to actually download the data
+Use `download_images.py` (which calls `img_dl`) to actually download the data (~500TB ingress, ~500TB output, ~200 CPU days)
 ```shell
 # usage:
 # python3 download_images.py <threads> <input dir> <error dir> <image output dir>
@@ -49,7 +51,7 @@ python3 download_images.py 8 new_errors new_new_errors images
 # etc etc repeat until satisfied
 ```
 
-Use `file_convert.py` to convert all images to jpeg, resize if too large, discard if too small
+Use `file_convert.py` to convert all images to jpeg, resize if too large, discard if too small (~500TB input, ~125TB output, ~100 CPU days)
 ```shell
 # usage:
 # python3 file_convert.py <threads> <downloaded images> <deduped URL dir> <image output> <label output dir>
